@@ -10,8 +10,12 @@ pragma solidity ^0.8.0;
 
 import { LibDiamond } from "./libraries/LibDiamond.sol";
 import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
+import { IValidationModule } from "./interfaces/IValidationModule.sol";
+import {ValidationFacet} from "./facets/ValidationFacet.sol";
 
 contract Diamond {    
+    error NotAuthorized();
+    error FunctionDoesNotExist();
 
     constructor(address _contractOwner, address _diamondCutFacet) payable {        
         LibDiamond.setContractOwner(_contractOwner);
@@ -37,8 +41,27 @@ contract Diamond {
         assembly {
             ds.slot := position
         }
+
+        bytes4 msgSig = msg.sig;
+
+        address validatorAddr = ValidationFacet(address(this)).getValidator();
+        if (validatorAddr != address(0)) {
+            bool ok = IValidationModule(validatorAddr).validate(
+                msg.sender,       // sender
+                msgSig,           // selector
+                msg.data,         // calldata
+                msg.value         // value
+            );
+            if (!ok) revert NotAuthorized();
+        }
+
         // get facet from function selector
-        address facet = ds.selectorToFacetAndPosition[msg.sig].facetAddress;
+        address facet = ds.selectorToFacetAndPosition[msgSig].facetAddress;
+
+        if(address(0) == facet) {
+            revert FunctionDoesNotExist();
+        }
+
         require(facet != address(0), "Diamond: Function does not exist");
         // Execute external function from facet using delegatecall and return any value.
         assembly {
