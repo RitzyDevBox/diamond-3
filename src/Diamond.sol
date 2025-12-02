@@ -44,13 +44,13 @@ contract Diamond {
 
         bytes4 msgSig = msg.sig;
 
-        address validatorAddr = ValidationFacet(address(this)).getValidator();
+        address validatorAddr = LibDiamond.getValidator();
         if (validatorAddr != address(0)) {
             bool ok = IValidationModule(validatorAddr).validate(
-                msg.sender,       // sender
-                msgSig,           // selector
-                msg.data,         // calldata
-                msg.value         // value
+                msg.sender,
+                msg.sig,
+                msg.data,
+                msg.value
             );
             if (!ok) revert NotAuthorized();
         }
