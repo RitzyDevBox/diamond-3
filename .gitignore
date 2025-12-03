@@ -4,3 +4,7 @@ node_modules
 cache
 artifacts
 .env
+
+# Foundry build output
+out/
+cache/
