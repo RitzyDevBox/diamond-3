@@ -50,7 +50,7 @@ contract DiamondFactory {
         bytes32 salt = keccak256(abi.encode(msg.sender, seed));
 
         diamondAddr = address(
-            new Diamond{salt: salt}(msg.sender, address(cutFacet))
+            new Diamond{salt: salt}(address(this), address(cutFacet))
         );
 
         // ------------------------------------------------------------
@@ -82,6 +82,7 @@ contract DiamondFactory {
         // Set validator = OwnerValidationModule
         // ------------------------------------------------------------
         ValidationFacet(diamondAddr).updateValidator(address(validator));
+        OwnershipFacet(diamondAddr).transferOwnership(msg.sender);
 
         emit DiamondDeployed(msg.sender, seed, diamondAddr);
     }
