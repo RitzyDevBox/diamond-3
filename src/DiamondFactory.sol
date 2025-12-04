@@ -13,20 +13,36 @@ import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
 contract DiamondFactory {
     event DiamondDeployed(address indexed user, uint256 indexed seed, address diamond);
 
+    // ------------------------------------------------------------
+    // Deploy core facets
+    // ------------------------------------------------------------
+    DiamondCutFacet cutFacet;
+    DiamondLoupeFacet loupeFacet;
+    OwnershipFacet ownershipFacet;
+    ValidationFacet validationFacet;
+    OwnerValidationModule validator;
+
+    constructor(
+        address _cutFacet,
+        address _loupeFacet,
+        address _ownershipFacet,
+        address _validationFacet,
+        address _validator
+    ) {
+        cutFacet = DiamondCutFacet(_cutFacet);
+        loupeFacet = DiamondLoupeFacet(_loupeFacet);
+        ownershipFacet = OwnershipFacet(_ownershipFacet);
+        validationFacet = ValidationFacet(_validationFacet);
+        validator = OwnerValidationModule(_validator);
+    }
+
     /// @notice Deploy a Diamond using CREATE2 + seed
     /// @param seed Any user-chosen number (unique per wallet)
     function deployDiamond(uint256 seed)
         external
         returns (address diamondAddr)
     {
-        // ------------------------------------------------------------
-        // Deploy core facets
-        // ------------------------------------------------------------
-        DiamondCutFacet cutFacet = new DiamondCutFacet();
-        DiamondLoupeFacet loupeFacet = new DiamondLoupeFacet();
-        OwnershipFacet ownershipFacet = new OwnershipFacet();
-        ValidationFacet validationFacet = new ValidationFacet();
-        OwnerValidationModule validator = new OwnerValidationModule();
+
 
         // ------------------------------------------------------------
         // CREATE2 deploy the Diamond
