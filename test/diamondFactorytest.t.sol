@@ -34,7 +34,7 @@ contract DiamondFactoryTest is Test {
     DiamondLoupeFacet loupeFacet;
     OwnershipFacet ownershipFacet;
     ValidationFacet validationFacet;
-    OwnerValidationFacet validatorModule;
+    OwnerValidationFacet ownerValidatorFacet;
     MockFacet mockFacet;
 
     address deployer = address(0xBEEF);
@@ -48,7 +48,7 @@ contract DiamondFactoryTest is Test {
         loupeFacet = new DiamondLoupeFacet();
         ownershipFacet = new OwnershipFacet();
         validationFacet = new ValidationFacet();
-        validatorModule = new OwnerValidationFacet();
+        ownerValidatorFacet = new OwnerValidationFacet();
         mockFacet = new MockFacet();
 
         // Deploy factory
@@ -57,7 +57,7 @@ contract DiamondFactoryTest is Test {
             address(loupeFacet),
             address(ownershipFacet),
             address(validationFacet),
-            address(validatorModule)
+            address(ownerValidatorFacet)
         );
 
         vm.stopPrank();
@@ -78,11 +78,9 @@ contract DiamondFactoryTest is Test {
 
         // --------------- ASSERT VALIDATOR SET -------------
         address v = ValidationFacet(diamondAddr).getValidator();
-        assertEq(v, address(validatorModule), "Validator should be OwnerValidationFacet");
+        assertEq(v, address(ownerValidatorFacet), "Validator should be OwnerValidationFacet");
 
         // --------------- ASSERT CALL ALLOWED (owner) ------
-        vm.expectEmit(true, false, false, true);
-        emit MockFacet.Ping(user);
 
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[]( 1 ) ;
         cut[0] = IDiamondCut.FacetCut({
@@ -93,6 +91,9 @@ contract DiamondFactoryTest is Test {
 
         IDiamondCut(diamondAddr).diamondCut(cut, address(0), "");
         
+        vm.expectEmit(true, false, false, true);
+        emit MockFacet.Ping(user);
+
         // Should succeed because user == owner
         MockFacet(diamondAddr).ping();
 
