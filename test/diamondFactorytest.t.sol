@@ -128,6 +128,21 @@ contract DiamondFactoryTest is Test {
         vm.stopPrank();
     }
 
+    function testComputeDiamondAddress() public {
+        address predicted = factory.computeDiamondAddress(user, 999);
+
+        vm.startPrank(user);
+        address deployed = factory.deployDiamond(999);
+        vm.stopPrank();
+
+        assertEq(
+            deployed,
+            predicted,
+            "computeDiamondAddress must match actual CREATE2 deployment"
+        );
+    }
+
+
     function mockValidatorSelectors() internal pure returns (bytes4[] memory s) {
         s = new bytes4[](1);
         s[0] = MockFacet.ping.selector;

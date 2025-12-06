@@ -134,7 +134,7 @@ contract DiamondFactory {
 
         bytes memory bytecode = abi.encodePacked(
             type(Diamond).creationCode,
-            abi.encode(user, address(0xDEAD)) // dummy cutFacet for prediction only
+            abi.encode(address(this), address(cutFacet))
         );
 
         bytes32 hash = keccak256(
@@ -143,4 +143,5 @@ contract DiamondFactory {
 
         return address(uint160(uint(hash)));
     }
+
 }
