@@ -12,6 +12,9 @@ import { OwnerValidationFacet } from "../src/facets/OwnerValidationFacet.sol";
 
 import { BasicWalletFacet } from "../src/facets/BasicWalletFacet.sol";
 import { IDiamondCut } from "../src/interfaces/IDiamondCut.sol";
+import { MockERC20 } from "./mocks/MockERC20.sol";
+import { MockERC721 } from "./mocks/MockERC721.sol";
+import { MockWETH } from "./mocks/MockWETH.sol";
 
 contract BasicWalletFacetTest is Test {
     DiamondFactory factory;
@@ -23,6 +26,7 @@ contract BasicWalletFacetTest is Test {
     OwnerValidationFacet ownerValidatorFacet;
     BasicWalletFacet walletFacet;
     IDiamondCut diamond;
+    BasicWalletFacet wallet;
 
     address deployer = address(0xBEEF);
     address user = address(0xCAFE);
@@ -56,6 +60,7 @@ contract BasicWalletFacetTest is Test {
         address diamondAddr = factory.deployDiamond(1);
         diamond = IDiamondCut(diamondAddr);
         installFacetForTesting();
+        wallet = BasicWalletFacet(payable(address(diamond))); 
 
         vm.stopPrank();
 
@@ -83,5 +88,109 @@ contract BasicWalletFacetTest is Test {
         s[6] = BasicWalletFacet.approveERC721.selector;
         s[7] = BasicWalletFacet.setERC721ApprovalForAll.selector;
         s[8] = BasicWalletFacet.onERC721Received.selector;
+    }
+
+
+    /// ------------------------------------------------------------
+    /// Facet Tests 
+    /// ------------------------------------------------------------
+
+    function testSendETH() public {
+
+        // Fund the diamond
+        vm.deal(address(diamond), 5 ether);
+
+        address recipient = address(0xBABE);
+        uint256 before = recipient.balance;
+
+        vm.prank(user);
+        wallet.sendETH(recipient, 1 ether);
+
+        assertEq(recipient.balance, before + 1 ether, "ETH not sent");
+        assertEq(address(diamond).balance, 4 ether, "Diamond balance incorrect");
+    }
+
+    function testWrapAndUnwrapETH() public {
+        // deploy fake WETH
+        MockWETH weth = new MockWETH();
+
+        vm.deal(address(diamond), 2 ether);
+
+        // wrap 1 ETH
+        vm.prank(user);
+        wallet.wrapETH(address(weth), 1 ether);
+        assertEq(weth.balanceOf(address(diamond)), 1 ether, "WETH not minted");
+
+        // unwrap 1 ETH
+        vm.prank(user);
+        wallet.unwrapETH(address(weth), 1 ether);
+        assertEq(weth.balanceOf(address(diamond)), 0, "WETH not burned");
+        assertEq(address(diamond).balance, 2 ether, "ETH not unwrapped");
+    }
+
+    function testSendERC20() public {
+        MockERC20 token = new MockERC20();
+
+        // give diamond 500 tokens
+        token.mint(address(diamond), 500);
+
+        vm.prank(user);
+        wallet.sendERC20(address(token), address(0xF00D), 100);
+
+        assertEq(token.balanceOf(address(0xF00D)), 100, "did not transfer");
+        assertEq(token.balanceOf(address(diamond)), 400, "diamond balance wrong");
+    }
+
+    function testApproveERC20() public {
+        MockERC20 token = new MockERC20();
+
+        vm.prank(user);
+        wallet.approveERC20(address(token), address(0xF00D), 123);
+
+        assertEq(token.allowance(address(diamond), address(0xF00D)), 123);
+    }
+
+    function testSendERC721() public {
+        MockERC721 nft = new MockERC721();
+
+        // mint NFT to diamond
+        nft.mint(address(diamond), 77);
+
+        vm.prank(user);
+        wallet.sendERC721(address(nft), address(0xC0FFEE), 77);
+
+        assertEq(nft.ownerOf(77), address(0xC0FFEE));
+    }
+
+    function testApproveERC721() public {
+        MockERC721 nft = new MockERC721();
+        nft.mint(address(diamond), 88);
+
+        vm.prank(user);
+        wallet.approveERC721(address(nft), address(0xF00D), 88);
+
+        assertEq(nft.getApproved(88), address(0xF00D));
+    }
+
+    function testSetERC721ApprovalForAll() public {
+        MockERC721 nft = new MockERC721();
+
+        vm.prank(user);
+        wallet.setERC721ApprovalForAll(address(nft), address(0xF00D), true);
+
+        assertTrue(nft.isApprovedForAll(address(diamond), address(0xF00D)));
+    }
+
+    //TODO: This test will fail until we update the validator to allow anyone to call the callback
+    function testERC721Receiver() public {
+        MockERC721 nft = new MockERC721();
+
+        // safe transfer TO diamond
+        nft.mint(address(this), 999);
+
+        // trigger safeTransferFrom which calls onERC721Received
+        nft.safeTransferFrom(address(this), address(diamond), 999);
+
+        assertEq(nft.ownerOf(999), address(diamond), "diamond did not receive NFT");
     }
 }
