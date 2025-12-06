@@ -6,23 +6,15 @@ import "forge-std/Test.sol";
 import {Diamond} from "../src/Diamond.sol";
 import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
+import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "../src/facets/OwnershipFacet.sol";
 import {ValidationFacet} from "../src/facets/ValidationFacet.sol";
 import {IDiamondCut} from "../src/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "../src/interfaces/IDiamondLoupe.sol";
 import {IValidationModule} from "../src/interfaces/IValidationModule.sol";
+import {OwnerValidationFacet} from "../src/facets/OwnerValidationFacet.sol";
 
-contract MockValidator is IValidationModule {
-    bool public shouldAllow;
-
-    constructor(bool allow) {
-        shouldAllow = allow;
-    }
-
-    function setAllow(bool allow) external {
-        shouldAllow = allow;
-    }
-
+contract AllowValidator is IValidationModule {
     function validate(
         address,
         bytes4,
@@ -33,7 +25,22 @@ contract MockValidator is IValidationModule {
         view
         returns (bool)
     {
-        return shouldAllow;
+        return true;
+    }
+}
+
+contract DenyValidator is IValidationModule {
+    function validate(
+        address,
+        bytes4,
+        bytes calldata,
+        uint256
+    )
+        external
+        view
+        returns (bool)
+    {
+        return false;
     }
 }
 
@@ -52,8 +59,8 @@ contract ValidationFacetTest is Test {
     OwnershipFacet ownershipFacet;
     ValidationFacet validationFacet;
 
-    MockValidator allowValidator;
-    MockValidator denyValidator;
+    AllowValidator allowValidator;
+    DenyValidator denyValidator;
     MockFacet mockFacet;
 
 
@@ -70,8 +77,8 @@ contract ValidationFacetTest is Test {
         validationFacet = new ValidationFacet();
 
         // Deploy mock validator modules
-        allowValidator = new MockValidator(true);
-        denyValidator = new MockValidator(false);
+        allowValidator = new AllowValidator();
+        denyValidator = new DenyValidator();
 
         // Deploy mock facet (a simple callable function)
         mockFacet = new MockFacet();
@@ -94,7 +101,7 @@ contract ValidationFacetTest is Test {
         baseCut[2] = IDiamondCut.FacetCut({
             facetAddress: address(validationFacet),
             action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: validationSelectors()
+            functionSelectors: validationOperationSelectors()
         });
 
         IDiamondCut(address(diamond)).diamondCut(baseCut, address(0), "");
@@ -120,12 +127,12 @@ contract ValidationFacetTest is Test {
     }
 
     function test_allowValidator_allowsCalls() public {
-        ValidationFacet(address(diamond)).updateValidator(address(allowValidator));
+        installValidator(address(allowValidator));
         MockFacet(address(diamond)).ping(); // should NOT revert
     }
 
     function test_denyValidator_blocksCalls() public {
-        ValidationFacet(address(diamond)).updateValidator(address(denyValidator));
+        installValidator(address(denyValidator));
         vm.expectRevert(Diamond.NotAuthorized.selector);
         MockFacet(address(diamond)).ping();
     }
@@ -133,6 +140,19 @@ contract ValidationFacetTest is Test {
     // ------------------------------------------------------------
     // Helper Functions
     // ------------------------------------------------------------
+
+    function installValidator(address validatorAddress) internal {
+        IDiamondCut.FacetCut[] memory baseCut = new IDiamondCut.FacetCut[](1);
+        baseCut[0] = IDiamondCut.FacetCut({
+            facetAddress: validatorAddress,
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: IValidationModuleSelectors()
+        });
+
+        IDiamondCut(address(diamond)).diamondCut(baseCut, address(0), "");
+
+        ValidationFacet(address(diamond)).updateValidator(validatorAddress);
+    }
 
     function loupeSelectors() internal pure returns (bytes4[] memory s) {
         s = new bytes4[](4);
@@ -148,14 +168,19 @@ contract ValidationFacetTest is Test {
         s[1] = OwnershipFacet.transferOwnership.selector;
     }
 
-    function validationSelectors() internal pure returns (bytes4[] memory s) {
+    function validationOperationSelectors() internal pure returns (bytes4[] memory s) {
         s = new bytes4[](2);
         s[0] = ValidationFacet.getValidator.selector;
         s[1] = ValidationFacet.updateValidator.selector;
     }
 
+    function IValidationModuleSelectors() internal pure returns (bytes4[] memory s) {
+        s = new bytes4[](1);
+        s[0] = IValidationModule.validate.selector;
+    }
+
     function mockValidatorSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](2);
+        s = new bytes4[](1);
         s[0] = MockFacet.ping.selector;
     }
 }

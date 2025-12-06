@@ -6,7 +6,7 @@ import {DiamondCutFacet} from "./facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "./facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "./facets/OwnershipFacet.sol";
 import {ValidationFacet} from "./facets/ValidationFacet.sol";
-import {OwnerValidationModule} from "./facets/OwnerValidationModule.sol";
+import {OwnerValidationFacet} from "./facets/OwnerValidationFacet.sol";
 
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
 
@@ -20,7 +20,7 @@ contract DiamondFactory {
     DiamondLoupeFacet loupeFacet;
     OwnershipFacet ownershipFacet;
     ValidationFacet validationFacet;
-    OwnerValidationModule validator;
+    OwnerValidationFacet validator;
 
     constructor(
         address _cutFacet,
@@ -33,7 +33,7 @@ contract DiamondFactory {
         loupeFacet = DiamondLoupeFacet(_loupeFacet);
         ownershipFacet = OwnershipFacet(_ownershipFacet);
         validationFacet = ValidationFacet(_validationFacet);
-        validator = OwnerValidationModule(_validator);
+        validator = OwnerValidationFacet(_validator);
     }
 
     /// @notice Deploy a Diamond using CREATE2 + seed
@@ -56,7 +56,7 @@ contract DiamondFactory {
         // ------------------------------------------------------------
         // Register loupe, ownership, and validation facets
         // ------------------------------------------------------------
-        IDiamondCut.FacetCut[] memory baseCut = new IDiamondCut.FacetCut[](3);
+        IDiamondCut.FacetCut[] memory baseCut = new IDiamondCut.FacetCut[](4);
 
         baseCut[0] = IDiamondCut.FacetCut({
             facetAddress: address(loupeFacet),
@@ -75,6 +75,13 @@ contract DiamondFactory {
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: validationSelectors()
         });
+
+        baseCut[3] = IDiamondCut.FacetCut({
+            facetAddress: address(validator),
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: ownerValidationSelectors()
+        });
+
 
         IDiamondCut(diamondAddr).diamondCut(baseCut, address(0), "");
 
@@ -108,6 +115,11 @@ contract DiamondFactory {
         s = new bytes4[](2);
         s[0] = ValidationFacet.getValidator.selector;
         s[1] = ValidationFacet.updateValidator.selector;
+    }
+
+    function ownerValidationSelectors() internal pure returns (bytes4[] memory s) {
+        s = new bytes4[](1);
+        s[0] = OwnerValidationFacet.validate.selector;
     }
 
     // ------------------------------------------------------------

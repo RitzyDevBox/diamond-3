@@ -9,7 +9,7 @@ import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "../src/facets/OwnershipFacet.sol";
 import {ValidationFacet} from "../src/facets/ValidationFacet.sol";
-import {OwnerValidationModule} from "../src/facets/OwnerValidationModule.sol";
+import {OwnerValidationFacet} from "../src/facets/OwnerValidationFacet.sol";
 
 contract DeployDiamondFactory is Script {
     function run() external {
@@ -23,13 +23,13 @@ contract DeployDiamondFactory is Script {
         DiamondLoupeFacet loupeFacet = new DiamondLoupeFacet();
         OwnershipFacet ownershipFacet = new OwnershipFacet();
         ValidationFacet validationFacet = new ValidationFacet();
-        OwnerValidationModule validator = new OwnerValidationModule();
+        OwnerValidationFacet validator = new OwnerValidationFacet();
 
         console2.log("DiamondCutFacet:       ", address(cutFacet));
         console2.log("DiamondLoupeFacet:     ", address(loupeFacet));
         console2.log("OwnershipFacet:        ", address(ownershipFacet));
         console2.log("ValidationFacet:       ", address(validationFacet));
-        console2.log("OwnerValidationModule: ", address(validator));
+        console2.log("OwnerValidationFacet: ", address(validator));
 
         // -------------------------------
         // Deploy factory with facet addrs

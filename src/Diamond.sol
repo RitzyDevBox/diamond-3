@@ -44,16 +44,23 @@ contract Diamond {
 
         bytes4 msgSig = msg.sig;
 
-        address validatorAddr = LibDiamond.getValidator();
-        if (validatorAddr != address(0)) {
-            bool ok = IValidationModule(validatorAddr).validate(
+        address validator = LibDiamond.getValidator();
+        if (validator != address(0)) {
+            bytes memory callData = abi.encodeWithSelector(
+                IValidationModule.validate.selector,
                 msg.sender,
-                msg.sig,
+                msgSig,
                 msg.data,
                 msg.value
             );
-            if (!ok) revert NotAuthorized();
+
+            (bool ok, bytes memory ret) = validator.delegatecall(callData);
+
+            if (!ok || ret.length != 32 || !abi.decode(ret, (bool))) {
+                revert NotAuthorized();
+            }
         }
+
 
         // get facet from function selector
         address facet = ds.selectorToFacetAndPosition[msgSig].facetAddress;

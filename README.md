@@ -74,9 +74,9 @@ forge script script/deployDiamondFactory.s.sol:DeployDiamondFactory \
 
 ## Existing Deployments:
 
-  DiamondCutFacet:        0x530cEDC71065c7C99D75Ff92A06224344E994DF6
-  DiamondLoupeFacet:      0x463958828FF2157862540A7Cb11240Dc76E80c7a
-  OwnershipFacet:         0x902dF657ca8E3389F11C6886A98ac58586986ae6
-  ValidationFacet:        0xbB26aFc03112D60B74111d2157fd61CE61EbB3dC
-  OwnerValidationModule:  0x26B3190Ffd4e4E3bDF7bDD687B68db115654E102
-  DiamondFactory deployed at: 0x62C78c7E4dd26214eA44617Fa9cDd6F285d24C7A
+  DiamondCutFacet:        0xc562e12eC6Fc842FC729d1d37274A34483Ce180e
+  DiamondLoupeFacet:      0x1692e2E1c580cCaaaC4F3D2b44a2AC1EE10e7B3D
+  OwnershipFacet:         0x5Ec444910Add57E5715Cb7a25702903FdA5c58D5
+  ValidationFacet:        0xE3545DF9c2d3fA766196a1886173E1b66e17D0f7
+  OwnerValidationModule:  0x3A88f91D0812a2370c7F4Bd6605676ADdDBcC44B
+  DiamondFactory deployed at: 0x46c30d20098EE751A1EA9eFb12a5619A7f2E54c3
