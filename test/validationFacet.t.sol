@@ -150,8 +150,6 @@ contract ValidationFacetTest is Test {
         });
 
         IDiamondCut(address(diamond)).diamondCut(baseCut, address(0), "");
-
-        ValidationFacet(address(diamond)).updateValidator(validatorAddress);
     }
 
     function loupeSelectors() internal pure returns (bytes4[] memory s) {
@@ -169,9 +167,8 @@ contract ValidationFacetTest is Test {
     }
 
     function validationOperationSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](2);
+        s = new bytes4[](1);
         s[0] = ValidationFacet.getValidator.selector;
-        s[1] = ValidationFacet.updateValidator.selector;
     }
 
     function IValidationModuleSelectors() internal pure returns (bytes4[] memory s) {

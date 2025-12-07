@@ -39,8 +39,6 @@ library LibDiamond {
         mapping(bytes4 => bool) supportedInterfaces;
         // owner of the contract
         address contractOwner;
-        // default validator address for fallback 
-        address validator;
     }
 
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
@@ -49,14 +47,6 @@ library LibDiamond {
         assembly {
             ds.slot := position
         }
-    }
-
-    function setValidator(address _validator) internal {
-        diamondStorage().validator = _validator;
-    }
-
-    function getValidator() internal view returns (address) {
-        return diamondStorage().validator;
     }
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);

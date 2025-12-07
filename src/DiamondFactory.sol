@@ -42,8 +42,6 @@ contract DiamondFactory {
         external
         returns (address diamondAddr)
     {
-
-
         // ------------------------------------------------------------
         // CREATE2 deploy the Diamond
         // ------------------------------------------------------------
@@ -88,7 +86,6 @@ contract DiamondFactory {
         // ------------------------------------------------------------
         // Set validator = OwnerValidationModule
         // ------------------------------------------------------------
-        ValidationFacet(diamondAddr).updateValidator(address(validator));
         OwnershipFacet(diamondAddr).transferOwnership(msg.sender);
 
         emit DiamondDeployed(msg.sender, seed, diamondAddr);
@@ -112,9 +109,8 @@ contract DiamondFactory {
     }
 
     function validationSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](2);
+        s = new bytes4[](1);
         s[0] = ValidationFacet.getValidator.selector;
-        s[1] = ValidationFacet.updateValidator.selector;
     }
 
     function ownerValidationSelectors() internal pure returns (bytes4[] memory s) {
