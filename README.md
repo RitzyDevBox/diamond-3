@@ -72,11 +72,19 @@ forge script script/deployDiamondFactory.s.sol:DeployDiamondFactory \
   --legacy
 
 
-## Existing Deployments:
+## Initial Modules Deployments:
 
-  DiamondCutFacet:        0xEF692792B764d482B59bF4A2E102553a12e33cB5
-  DiamondLoupeFacet:      0xb9c4ec659666888fB01bA89B8c889eE33c280AB4
-  OwnershipFacet:         0x119dA5fD2d8Fd0C62e9F9b3827F0E28A89bB151E
-  ValidationFacet:        0x9eca556E7A08822A710b1c22B375a2C81a6d7ecC
-  OwnerValidationFacet:  0xf99728FCD046Dd3D2Ff82aD2C42f186E8cF27d36
-  DiamondFactory deployed at: 0xA2156c50c876cA57efF74f1646bC642a74e06a64
+  DiamondLoupeFacet:      0x69238e56411524FeB5E0C700221A916d4A98FBe7
+  OwnershipFacet:         0xCeD152Ea769b1740feEcCDa959e9C45C99227d47
+  ValidationFacet:        0xaE78271d68274F6Dc5d49C0f5557f2C0c465Dbd9
+  OwnerValidationFacet:  0x7002E6f18f240f8e2209d3209D061a6E1E1bE977
+  DiamondFactory deployed at: 0xC95776A97661A21d86FA1Bb9b9fF6934E15BF1AF
+
+## Optional Modules
+
+forge script script/DeployBasicWalletFacet.s.sol:DeployBasicWalletFacet \
+  --fork-url hypercore \
+  --broadcast \
+  --legacy
+
+  BasicWalletFacet deployed at: 0x79e2fa7763C4D1884f6a6D98b51220eD79fC4484
