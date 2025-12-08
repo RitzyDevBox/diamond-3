@@ -88,3 +88,15 @@ forge script script/DeployBasicWalletFacet.s.sol:DeployBasicWalletFacet \
   --legacy
 
   BasicWalletFacet deployed at: 0x79e2fa7763C4D1884f6a6D98b51220eD79fC4484
+
+forge script script/DeployOpenMintERC20.s.sol:DeployOpenMintERC20   --fork-url hypercore   --broadcast   --legacy
+
+    OpenMintERC20 deployed at: 0x8900E4FCd3C2e6d5400fdE29719Eb8b5fc811b3c
+    Name:      OpenMint
+    Symbol:    OM20
+    Decimals:  18
+
+forge script script/MintOpenMintERC20.s.sol:MintOpenMintERC20 \
+  --fork-url hypercore \
+  --broadcast \
+  --legacy
