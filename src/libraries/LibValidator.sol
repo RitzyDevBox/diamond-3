@@ -4,6 +4,7 @@ library LibValidator {
 
     struct ValidationStorage {
         address validator;
+        mapping(bytes4 => bool) whitelist;
     }
 
     function vstore()
@@ -14,4 +15,15 @@ library LibValidator {
         bytes32 pos = STORAGE_POSITION;
         assembly { vs.slot := pos }
     }
+
+    function isPublic(bytes4 selector) internal view returns (bool) {
+        ValidationStorage storage vs = vstore();
+        return vs.whitelist[selector];
+    }
+
+    function setPublic(bytes4 selector, bool allowed) internal {
+        ValidationStorage storage vs = vstore();
+        vs.whitelist[selector] = allowed;
+    }
 }
+

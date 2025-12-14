@@ -14,6 +14,7 @@ import {OwnerValidationFacet} from "../src/facets/OwnerValidationFacet.sol";
 import {IDiamondCut} from "../src/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "../src/interfaces/IDiamondLoupe.sol";
 import {IValidationModule} from "../src/interfaces/IValidationModule.sol";
+import {IERC165} from "../src/interfaces/IERC165.sol";
 
 /// ------------------------------------------------------------
 /// Mock Facet
@@ -142,6 +143,39 @@ contract DiamondFactoryTest is Test {
         );
     }
 
+    function testPublicSelectorsArePublic() public {
+        vm.startPrank(user);
+
+        // Deploy diamond
+        address diamondAddr = factory.deployDiamond(111);
+
+        vm.stopPrank();
+
+        // Now ANYONE should be able to call public selectors
+        vm.startPrank(address(0xB0B));
+
+        // --- facets() ---
+        IDiamondLoupe.Facet[] memory f = IDiamondLoupe(diamondAddr).facets();
+        assertGt(f.length, 0, "facets should be public");
+
+        // --- facetAddresses() ---
+        address[] memory addrs = IDiamondLoupe(diamondAddr).facetAddresses();
+        assertGt(addrs.length, 0, "facetAddresses should be public");
+
+        // --- facetFunctionSelectors() ---
+        bytes4[] memory selectors = IDiamondLoupe(diamondAddr).facetFunctionSelectors(addrs[0]);
+        assertGt(selectors.length, 0, "facetFunctionSelectors should be public");
+
+        // --- facetAddress() ---
+        address addr = IDiamondLoupe(diamondAddr).facetAddress(selectors[0]);
+        assertTrue(addr != address(0), "facetAddress should be public");
+
+        // --- getValidator() ---
+        address val = ValidationFacet(diamondAddr).getValidator();
+        assertEq(val, address(ownerValidatorFacet), "getValidator should be public");
+
+        vm.stopPrank();
+    }
 
     function mockValidatorSelectors() internal pure returns (bytes4[] memory s) {
         s = new bytes4[](1);

@@ -9,6 +9,9 @@ import {ValidationFacet} from "./facets/ValidationFacet.sol";
 import {OwnerValidationFacet} from "./facets/OwnerValidationFacet.sol";
 
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
+import {IDiamondLoupe} from "../src/interfaces/IDiamondLoupe.sol";
+import { IERC165 } from "./interfaces/IERC165.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract DiamondFactory {
     event DiamondDeployed(address indexed user, uint256 indexed seed, address diamond);
@@ -82,7 +85,8 @@ contract DiamondFactory {
 
 
         IDiamondCut(diamondAddr).diamondCut(baseCut, address(0), "");
-
+        initValidationWhitelist(diamondAddr);
+        
         // ------------------------------------------------------------
         // Set validator = OwnerValidationModule
         // ------------------------------------------------------------
@@ -109,8 +113,10 @@ contract DiamondFactory {
     }
 
     function validationSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](1);
+        s = new bytes4[](3);
         s[0] = ValidationFacet.getValidator.selector;
+        s[1] = ValidationFacet.setPublicSelector.selector;
+        s[2] = ValidationFacet.isPublicSelector.selector;
     }
 
     function ownerValidationSelectors() internal pure returns (bytes4[] memory s) {
@@ -138,6 +144,20 @@ contract DiamondFactory {
         );
 
         return address(uint160(uint(hash)));
+    }
+
+    function initValidationWhitelist(address diamondAddr) internal {
+        bytes4[] memory selectors = new bytes4[](6);
+
+        selectors[0] = IDiamondLoupe.facets.selector;
+        selectors[1] = IDiamondLoupe.facetAddresses.selector;
+        selectors[2] = IDiamondLoupe.facetFunctionSelectors.selector;
+        selectors[3] = IDiamondLoupe.facetAddress.selector;
+        selectors[4] = ValidationFacet.getValidator.selector;
+        selectors[5] = IERC721Receiver.onERC721Received.selector;
+        //selectors[6] = IERC165.supportsInterface.selector;
+
+        ValidationFacet(diamondAddr).setPublicSelector(selectors, true);
     }
 
 }

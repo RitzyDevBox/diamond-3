@@ -9,9 +9,11 @@ pragma solidity ^0.8.0;
 /******************************************************************************/
 
 import { LibDiamond } from "./libraries/LibDiamond.sol";
+import { LibValidator } from "./libraries/LibValidator.sol";
 import { IDiamondCut } from "./interfaces/IDiamondCut.sol";
 import { IValidationModule } from "./interfaces/IValidationModule.sol";
 import {ValidationFacet} from "./facets/ValidationFacet.sol";
+
 
 contract Diamond {    
     error NotAuthorized();
@@ -44,7 +46,7 @@ contract Diamond {
         }
 
         address validator = ds.selectorToFacetAndPosition[IValidationModule.validate.selector].facetAddress;
-        if (validator != address(0)) {
+        if (validator != address(0) && !LibValidator.isPublic(msgSig)) {
             bytes memory callData = abi.encodeWithSelector(
                 IValidationModule.validate.selector,
                 msg.sender,

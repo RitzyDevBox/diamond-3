@@ -101,7 +101,7 @@ contract ValidationFacetTest is Test {
         baseCut[2] = IDiamondCut.FacetCut({
             facetAddress: address(validationFacet),
             action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: validationOperationSelectors()
+            functionSelectors: validationSelectors()
         });
 
         IDiamondCut(address(diamond)).diamondCut(baseCut, address(0), "");
@@ -171,6 +171,13 @@ contract ValidationFacetTest is Test {
         s[0] = ValidationFacet.getValidator.selector;
     }
 
+    function validationSelectors() internal pure returns (bytes4[] memory s) {
+        s = new bytes4[](3);
+        s[0] = ValidationFacet.getValidator.selector;
+        s[1] = ValidationFacet.setPublicSelector.selector;
+        s[2] = ValidationFacet.isPublicSelector.selector;
+    }
+
     function IValidationModuleSelectors() internal pure returns (bytes4[] memory s) {
         s = new bytes4[](1);
         s[0] = IValidationModule.validate.selector;
@@ -179,5 +186,30 @@ contract ValidationFacetTest is Test {
     function mockValidatorSelectors() internal pure returns (bytes4[] memory s) {
         s = new bytes4[](1);
         s[0] = MockFacet.ping.selector;
+    }
+
+    function test_publicSelector_bypassesValidation() public {
+        bytes4[] memory arr = new bytes4[](1);
+        arr[0] = MockFacet.ping.selector;
+        ValidationFacet(address(diamond)).setPublicSelector(arr, true);
+
+        // install deny validator
+        installValidator(address(denyValidator));
+
+        // should NOT revert because it's public
+        MockFacet(address(diamond)).ping();
+    }
+
+    function test_nonPublicSelector_isBlocked() public {
+        // make sure it's NOT public
+        bytes4[] memory arr = new bytes4[] (1);
+        arr[0] = MockFacet.ping.selector;
+        ValidationFacet(address(diamond)).setPublicSelector(arr, false);
+
+        // install deny validator
+        installValidator(address(denyValidator));
+
+        vm.expectRevert(Diamond.NotAuthorized.selector);
+        MockFacet(address(diamond)).ping();
     }
 }
