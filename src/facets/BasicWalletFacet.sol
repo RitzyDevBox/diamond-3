@@ -9,6 +9,7 @@ interface IWETH {
     function withdraw(uint256) external;
 }
 
+//OBSOLETE: Almost all of this will be replaced with the Execute Facet instead
 contract BasicWalletFacet {
     // =============================================================
     //                            ERRORS

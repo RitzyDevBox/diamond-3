@@ -5,9 +5,9 @@ import "forge-std/Test.sol";
 
 import {Diamond} from "../src/Diamond.sol";
 import {DiamondFactory} from "../src/DiamondFactory.sol";
-
 import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
+import {ExecuteFacet} from "../src/facets/ExecuteFacet.sol";
 import {OwnershipFacet} from "../src/facets/OwnershipFacet.sol";
 import {ValidationFacet} from "../src/facets/ValidationFacet.sol";
 import {OwnerValidationFacet} from "../src/facets/OwnerValidationFacet.sol";
@@ -37,6 +37,7 @@ contract DiamondFactoryTest is Test {
     ValidationFacet validationFacet;
     OwnerValidationFacet ownerValidatorFacet;
     MockFacet mockFacet;
+    ExecuteFacet executeFacet;
 
     address deployer = address(0xBEEF);
     address user     = address(0xCAFE);
@@ -50,6 +51,7 @@ contract DiamondFactoryTest is Test {
         ownershipFacet = new OwnershipFacet();
         validationFacet = new ValidationFacet();
         ownerValidatorFacet = new OwnerValidationFacet();
+        executeFacet = new ExecuteFacet();
         mockFacet = new MockFacet();
 
         // Deploy factory
@@ -58,7 +60,8 @@ contract DiamondFactoryTest is Test {
             address(loupeFacet),
             address(ownershipFacet),
             address(validationFacet),
-            address(ownerValidatorFacet)
+            address(ownerValidatorFacet),
+            address(executeFacet)
         );
 
         vm.stopPrank();

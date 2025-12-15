@@ -9,8 +9,8 @@ import { DiamondLoupeFacet } from "../src/facets/DiamondLoupeFacet.sol";
 import { OwnershipFacet } from "../src/facets/OwnershipFacet.sol";
 import { ValidationFacet } from "../src/facets/ValidationFacet.sol";
 import { OwnerValidationFacet } from "../src/facets/OwnerValidationFacet.sol";
-
 import { BasicWalletFacet } from "../src/facets/BasicWalletFacet.sol";
+import { ExecuteFacet } from "../src/facets/ExecuteFacet.sol";
 import { IDiamondCut } from "../src/interfaces/IDiamondCut.sol";
 import { MockERC20 } from "./mocks/MockERC20.sol";
 import { MockERC721 } from "./mocks/MockERC721.sol";
@@ -25,6 +25,7 @@ contract BasicWalletFacetTest is Test {
     ValidationFacet validationFacet;
     OwnerValidationFacet ownerValidatorFacet;
     BasicWalletFacet walletFacet;
+    ExecuteFacet executeFacet;
     IDiamondCut diamond;
     BasicWalletFacet wallet;
 
@@ -40,6 +41,7 @@ contract BasicWalletFacetTest is Test {
         ownershipFacet = new OwnershipFacet();
         validationFacet = new ValidationFacet();
         ownerValidatorFacet = new OwnerValidationFacet();
+        executeFacet = new ExecuteFacet();
 
         // Deploy wallet facet under test
         walletFacet = new BasicWalletFacet();
@@ -50,17 +52,23 @@ contract BasicWalletFacetTest is Test {
             address(loupeFacet),
             address(ownershipFacet),
             address(validationFacet),
-            address(ownerValidatorFacet)
+            address(ownerValidatorFacet),
+            address(executeFacet)
         );
         
         vm.stopPrank();
 
         vm.startPrank(user);
 
+
         address diamondAddr = factory.deployDiamond(1);
         diamond = IDiamondCut(diamondAddr);
         installFacetForTesting();
         wallet = BasicWalletFacet(payable(address(diamond))); 
+
+        bytes4[] memory arr = new bytes4[](1);
+        arr[0] = BasicWalletFacet.onERC721Received.selector;
+        ValidationFacet(address(diamond)).setPublicSelector(arr, true);
 
         vm.stopPrank();
 

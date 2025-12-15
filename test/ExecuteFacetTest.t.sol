@@ -16,7 +16,7 @@ import { MockERC20 } from "./mocks/MockERC20.sol";
 import { MockERC721 } from "./mocks/MockERC721.sol";
 import { MockWETH } from "./mocks/MockWETH.sol";
 
-contract BasicWalletFacetTest is Test {
+contract ExecuteFacetTest is Test {
     DiamondFactory factory;
 
     DiamondCutFacet cutFacet;
@@ -50,7 +50,8 @@ contract BasicWalletFacetTest is Test {
             address(loupeFacet),
             address(ownershipFacet),
             address(validationFacet),
-            address(ownerValidatorFacet)
+            address(ownerValidatorFacet),
+            address(executeFacet)
         );
         
         vm.stopPrank();
@@ -58,28 +59,10 @@ contract BasicWalletFacetTest is Test {
         vm.startPrank(user);
 
         diamondAddr = factory.deployDiamond(1);
-        installFacetForTesting(IDiamondCut(diamondAddr));
 
         diamondExec = ExecuteFacet(diamondAddr);
         vm.stopPrank();
 
-    }
-
-    function installFacetForTesting(IDiamondCut diamond) public {
-        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[]( 1 ) ;
-        cut[0] = IDiamondCut.FacetCut({
-            facetAddress: address(executeFacet),
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: installExecuteFacetSelectors()
-        });
-
-        diamond.diamondCut(cut, address(0), "");
-    }
-
-    function installExecuteFacetSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](2);
-        s[0] = ExecuteFacet.execute.selector;
-        s[1] = ExecuteFacet.batchExecute.selector;
     }
 
 

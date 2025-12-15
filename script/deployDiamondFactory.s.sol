@@ -10,6 +10,8 @@ import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
 import {OwnershipFacet} from "../src/facets/OwnershipFacet.sol";
 import {ValidationFacet} from "../src/facets/ValidationFacet.sol";
 import {OwnerValidationFacet} from "../src/facets/OwnerValidationFacet.sol";
+import {ExecuteFacet} from "../src/facets/ExecuteFacet.sol";
+
 
 contract DeployDiamondFactory is Script {
     function run() external {
@@ -24,6 +26,7 @@ contract DeployDiamondFactory is Script {
         OwnershipFacet ownershipFacet = new OwnershipFacet();
         ValidationFacet validationFacet = new ValidationFacet();
         OwnerValidationFacet validator = new OwnerValidationFacet();
+        ExecuteFacet executeFacet = new ExecuteFacet();
 
         console2.log("DiamondCutFacet:       ", address(cutFacet));
         console2.log("DiamondLoupeFacet:     ", address(loupeFacet));
@@ -39,7 +42,8 @@ contract DeployDiamondFactory is Script {
             address(loupeFacet),
             address(ownershipFacet),
             address(validationFacet),
-            address(validator)
+            address(validator),
+            address(executeFacet)
         );
 
         console2.log("DiamondFactory deployed at:", address(factory));
