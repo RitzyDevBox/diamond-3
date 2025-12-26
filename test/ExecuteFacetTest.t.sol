@@ -46,7 +46,6 @@ contract ExecuteFacetTest is Test {
             address(cutFacet),
             address(loupeFacet),
             address(validationFacet),
-            address(ownerAuthorityResolver),
             address(executeFacet)
         );
         
@@ -56,7 +55,7 @@ contract ExecuteFacetTest is Test {
 
         vm.startPrank(user);
 
-        diamondAddr = factory.deployDiamond(1);
+        diamondAddr = factory.deployDiamond(1, address(ownerAuthorityResolver), abi.encode(user));
 
         diamondExec = ExecuteFacet(diamondAddr);
         vm.stopPrank();

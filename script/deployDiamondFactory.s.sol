@@ -38,7 +38,6 @@ contract DeployDiamondFactory is Script {
             address(cutFacet),
             address(loupeFacet),
             address(validationFacet),
-            address(ownerAuthorityResolver),
             address(executeFacet)
         );
 

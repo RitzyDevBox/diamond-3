@@ -6,7 +6,7 @@ import {DiamondCutFacet} from "./facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "./facets/DiamondLoupeFacet.sol";
 import {ValidationFacet} from "./facets/ValidationFacet.sol";
 import {ExecuteFacet} from "./facets/ExecuteFacet.sol";
-import {OwnerAuthorityResolver} from "./resolvers/OwnerAuthorityResolver.sol";
+import {IAuthorityInitializer} from "./interfaces/IAuthorityInitializer.sol";
 
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "../src/interfaces/IDiamondLoupe.sol";
@@ -22,26 +22,23 @@ contract DiamondFactory {
     DiamondCutFacet cutFacet;
     DiamondLoupeFacet loupeFacet;
     ValidationFacet validationFacet;
-    OwnerAuthorityResolver authorityResolver;
     ExecuteFacet executeFacet; 
 
     constructor(
         address _cutFacet,
         address _loupeFacet,
         address _validationFacet,
-        address _authorityResolver,
         address _executeFacet
     ) {
         cutFacet = DiamondCutFacet(_cutFacet);
         loupeFacet = DiamondLoupeFacet(_loupeFacet);
         validationFacet = ValidationFacet(_validationFacet);
-        authorityResolver = OwnerAuthorityResolver(_authorityResolver);
         executeFacet = ExecuteFacet(_executeFacet);
     }
 
     /// @notice Deploy a Diamond using CREATE2 + seed
     /// @param seed Any user-chosen number (unique per wallet)
-    function deployDiamond(uint256 seed)
+    function deployDiamond(uint256 seed, address defaultAuthorizer, bytes calldata options)
         external
         returns (address diamondAddr)
     {
@@ -80,8 +77,9 @@ contract DiamondFactory {
         IDiamondCut(diamondAddr).diamondCut(baseCut, address(0), "");
         initValidationWhitelist(diamondAddr);
         
-        ValidationFacet(diamondAddr).setAuthorizer(address(authorityResolver));
-        authorityResolver.setOwner(diamondAddr, msg.sender);
+        ValidationFacet(diamondAddr).setAuthorizer(address(defaultAuthorizer));
+        
+        IAuthorityInitializer(defaultAuthorizer).initialize(diamondAddr, options);
         //OwnershipFacet(diamondAddr).transferOwnership(msg.sender);
 
         emit DiamondDeployed(msg.sender, seed, diamondAddr);
@@ -137,13 +135,14 @@ contract DiamondFactory {
     }
 
     function initValidationWhitelist(address diamondAddr) internal {
-        bytes4[] memory selectors = new bytes4[](5);
+        bytes4[] memory selectors = new bytes4[](6);
 
         selectors[0] = IDiamondLoupe.facets.selector;
         selectors[1] = IDiamondLoupe.facetAddresses.selector;
         selectors[2] = IDiamondLoupe.facetFunctionSelectors.selector;
         selectors[3] = IDiamondLoupe.facetAddress.selector;
         selectors[4] = ValidationFacet.getAuthorizer.selector;
+        selectors[5] = ValidationFacet.isPublicSelector.selector;
         // selectors[5] = IERC721Receiver.onERC721Received.selector;
         //selectors[6] = IERC165.supportsInterface.selector;
 

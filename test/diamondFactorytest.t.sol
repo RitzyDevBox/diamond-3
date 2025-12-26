@@ -56,7 +56,6 @@ contract DiamondFactoryTest is Test {
             address(cutFacet),
             address(loupeFacet),
             address(validationFacet),
-            address(ownerAuthorityResolver),
             address(executeFacet)
         );
 
@@ -71,8 +70,7 @@ contract DiamondFactoryTest is Test {
         vm.startPrank(user);
 
         // Deploy new diamond using seed=1
-        address diamondAddr = factory.deployDiamond(1);
-
+        address diamondAddr = factory.deployDiamond(1, address(ownerAuthorityResolver), abi.encode(user));
 
         // --------------- ASSERT CALL ALLOWED (owner) ------
 
@@ -100,7 +98,7 @@ contract DiamondFactoryTest is Test {
     function testValidatorBlocksNonOwner() public {
         vm.startPrank(user);
 
-        address diamondAddr = factory.deployDiamond(123);
+        address diamondAddr = factory.deployDiamond(123, address(ownerAuthorityResolver), abi.encode(user));
 
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
         cut[0] = IDiamondCut.FacetCut({
@@ -126,7 +124,7 @@ contract DiamondFactoryTest is Test {
         address predicted = factory.computeDiamondAddress(user, 999);
 
         vm.startPrank(user);
-        address deployed = factory.deployDiamond(999);
+        address deployed = factory.deployDiamond(999, address(ownerAuthorityResolver), abi.encode(user));
         vm.stopPrank();
 
         assertEq(
@@ -140,7 +138,7 @@ contract DiamondFactoryTest is Test {
         vm.startPrank(user);
 
         // Deploy diamond
-        address diamondAddr = factory.deployDiamond(111);
+        address diamondAddr = factory.deployDiamond(111, address(ownerAuthorityResolver), abi.encode(user));
 
         vm.stopPrank();
 

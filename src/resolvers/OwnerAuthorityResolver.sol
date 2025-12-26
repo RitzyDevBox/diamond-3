@@ -2,10 +2,12 @@
 pragma solidity ^0.8.24;
 
 import { IAuthorityResolver } from "../interfaces/IAuthorityResolver.sol";
+import { IAuthorityInitializer } from "../interfaces/IAuthorityInitializer.sol";
 
-contract OwnerAuthorityResolver is IAuthorityResolver {
+contract OwnerAuthorityResolver is IAuthorityResolver, IAuthorityInitializer {
     error NotFactory();
     error NotOwner();
+    error AlreadyInitialized();
 
     address public factory;
     mapping(address diamond => address owner) public ownerOf;
@@ -39,8 +41,16 @@ contract OwnerAuthorityResolver is IAuthorityResolver {
     }
 
     /// @notice Set initial owner (factory-only)
-    function setOwner(address diamond, address owner) external onlyFactory {
+    function initialize(address diamond, bytes calldata data)
+        external
+        override
+        onlyFactory
+    {
+        if (ownerOf[diamond] != address(0)) revert AlreadyInitialized();
+
+        address owner = abi.decode(data, (address));
         ownerOf[diamond] = owner;
+
         emit OwnerSet(diamond, owner);
     }
 
