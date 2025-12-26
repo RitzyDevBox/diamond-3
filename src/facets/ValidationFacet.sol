@@ -5,22 +5,53 @@ import { IValidationModule } from "../interfaces/IValidationModule.sol";
 import { LibDiamond } from "../libraries/LibDiamond.sol";
 import { LibValidator } from "../libraries/LibValidator.sol";
 import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
+import { IAuthorityResolver } from "../interfaces/IAuthorityResolver.sol";
 import { IERC165 } from "../interfaces/IERC165.sol";
 
-contract ValidationFacet {
+contract ValidationFacet is IValidationModule {
     
-    // ------------------------------------------------------------
-    // PUBLIC HELPER FOR UI & MODULES
-    // ------------------------------------------------------------
-    function getValidator() external view returns (address) {
-        LibDiamond.DiamondStorage storage ds;
-        bytes32 position = LibDiamond.DIAMOND_STORAGE_POSITION;
+    function validate(
+        address caller,
+        bytes4 selector,
+        bytes calldata data,
+        uint256 value
+    )
+        external
+        view
+        override
+        returns (bool)
+    {
+        // Public functions always allowed
+        if (LibValidator.isPublic(selector)) {
+            return true;
+        }
 
-        assembly { ds.slot := position }
+        address resolver = LibValidator.getAuthorityResolver();
+        if (resolver == address(0)) {
+            // permissionless by default (setup phase)
+            return true;
+        }
 
-        return ds.selectorToFacetAndPosition[
-            IValidationModule.validate.selector
-        ].facetAddress;
+        (bool ok, bytes memory ret) = resolver.staticcall(
+            abi.encodeWithSelector(
+                IAuthorityResolver.isAuthorized.selector,
+                caller,
+                selector,
+                data,
+                value
+            )
+        );
+
+        return ok && ret.length == 32 && abi.decode(ret, (bool));
+    }
+
+
+    function getAuthorizer() external view returns (address) {
+        return LibValidator.getAuthorityResolver();
+    }
+
+    function setAuthorizer(address _resolver) external {
+        return LibValidator.setAuthorityResolver(_resolver);
     }
 
     // ------------------------------------------------------------

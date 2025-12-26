@@ -5,12 +5,11 @@ import "forge-std/Test.sol";
 
 import {Diamond} from "../src/Diamond.sol";
 import {DiamondFactory} from "../src/DiamondFactory.sol";
+import {OwnerAuthorityResolver} from "../src/resolvers/OwnerAuthorityResolver.sol";
 import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
 import {ExecuteFacet} from "../src/facets/ExecuteFacet.sol";
-import {OwnershipFacet} from "../src/facets/OwnershipFacet.sol";
 import {ValidationFacet} from "../src/facets/ValidationFacet.sol";
-import {OwnerValidationFacet} from "../src/facets/OwnerValidationFacet.sol";
 import {IDiamondCut} from "../src/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "../src/interfaces/IDiamondLoupe.sol";
 import {IValidationModule} from "../src/interfaces/IValidationModule.sol";
@@ -33,9 +32,8 @@ contract DiamondFactoryTest is Test {
     // Pre-deployed facet singletons
     DiamondCutFacet cutFacet;
     DiamondLoupeFacet loupeFacet;
-    OwnershipFacet ownershipFacet;
     ValidationFacet validationFacet;
-    OwnerValidationFacet ownerValidatorFacet;
+    OwnerAuthorityResolver ownerAuthorityResolver;
     MockFacet mockFacet;
     ExecuteFacet executeFacet;
 
@@ -48,9 +46,8 @@ contract DiamondFactoryTest is Test {
         // Deploy shared facets
         cutFacet = new DiamondCutFacet();
         loupeFacet = new DiamondLoupeFacet();
-        ownershipFacet = new OwnershipFacet();
         validationFacet = new ValidationFacet();
-        ownerValidatorFacet = new OwnerValidationFacet();
+        ownerAuthorityResolver = new OwnerAuthorityResolver(deployer);
         executeFacet = new ExecuteFacet();
         mockFacet = new MockFacet();
 
@@ -58,12 +55,12 @@ contract DiamondFactoryTest is Test {
         factory = new DiamondFactory(
             address(cutFacet),
             address(loupeFacet),
-            address(ownershipFacet),
             address(validationFacet),
-            address(ownerValidatorFacet),
+            address(ownerAuthorityResolver),
             address(executeFacet)
         );
 
+        ownerAuthorityResolver.setFactory(address(factory));
         vm.stopPrank();
     }
 
@@ -76,13 +73,6 @@ contract DiamondFactoryTest is Test {
         // Deploy new diamond using seed=1
         address diamondAddr = factory.deployDiamond(1);
 
-        // --------------- ASSERT OWNERSHIP -----------------
-        address owner = OwnershipFacet(diamondAddr).owner();
-        assertEq(owner, user, "Factory should transfer ownership to user");
-
-        // --------------- ASSERT VALIDATOR SET -------------
-        address v = ValidationFacet(diamondAddr).getValidator();
-        assertEq(v, address(ownerValidatorFacet), "Validator should be OwnerValidationFacet");
 
         // --------------- ASSERT CALL ALLOWED (owner) ------
 
@@ -172,10 +162,6 @@ contract DiamondFactoryTest is Test {
         // --- facetAddress() ---
         address addr = IDiamondLoupe(diamondAddr).facetAddress(selectors[0]);
         assertTrue(addr != address(0), "facetAddress should be public");
-
-        // --- getValidator() ---
-        address val = ValidationFacet(diamondAddr).getValidator();
-        assertEq(val, address(ownerValidatorFacet), "getValidator should be public");
 
         vm.stopPrank();
     }

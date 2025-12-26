@@ -4,10 +4,9 @@ pragma solidity ^0.8.24;
 import {Diamond} from "./Diamond.sol";
 import {DiamondCutFacet} from "./facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "./facets/DiamondLoupeFacet.sol";
-import {OwnershipFacet} from "./facets/OwnershipFacet.sol";
 import {ValidationFacet} from "./facets/ValidationFacet.sol";
-import {OwnerValidationFacet} from "./facets/OwnerValidationFacet.sol";
 import {ExecuteFacet} from "./facets/ExecuteFacet.sol";
+import {OwnerAuthorityResolver} from "./resolvers/OwnerAuthorityResolver.sol";
 
 import {IDiamondCut} from "./interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "../src/interfaces/IDiamondLoupe.sol";
@@ -22,24 +21,21 @@ contract DiamondFactory {
     // ------------------------------------------------------------
     DiamondCutFacet cutFacet;
     DiamondLoupeFacet loupeFacet;
-    OwnershipFacet ownershipFacet;
     ValidationFacet validationFacet;
-    OwnerValidationFacet validator;
+    OwnerAuthorityResolver authorityResolver;
     ExecuteFacet executeFacet; 
 
     constructor(
         address _cutFacet,
         address _loupeFacet,
-        address _ownershipFacet,
         address _validationFacet,
-        address _validator,
+        address _authorityResolver,
         address _executeFacet
     ) {
         cutFacet = DiamondCutFacet(_cutFacet);
         loupeFacet = DiamondLoupeFacet(_loupeFacet);
-        ownershipFacet = OwnershipFacet(_ownershipFacet);
         validationFacet = ValidationFacet(_validationFacet);
-        validator = OwnerValidationFacet(_validator);
+        authorityResolver = OwnerAuthorityResolver(_authorityResolver);
         executeFacet = ExecuteFacet(_executeFacet);
     }
 
@@ -55,13 +51,13 @@ contract DiamondFactory {
         bytes32 salt = keccak256(abi.encode(msg.sender, seed));
 
         diamondAddr = address(
-            new Diamond{salt: salt}(address(this), address(cutFacet))
+            new Diamond{salt: salt}(address(cutFacet))
         );
 
         // ------------------------------------------------------------
         // Register loupe, ownership, and validation facets
         // ------------------------------------------------------------
-        IDiamondCut.FacetCut[] memory baseCut = new IDiamondCut.FacetCut[](5);
+        IDiamondCut.FacetCut[] memory baseCut = new IDiamondCut.FacetCut[](3);
 
         baseCut[0] = IDiamondCut.FacetCut({
             facetAddress: address(loupeFacet),
@@ -70,24 +66,12 @@ contract DiamondFactory {
         });
 
         baseCut[1] = IDiamondCut.FacetCut({
-            facetAddress: address(ownershipFacet),
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: ownershipSelectors()
-        });
-
-        baseCut[2] = IDiamondCut.FacetCut({
             facetAddress: address(validationFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: validationSelectors()
         });
 
-        baseCut[3] = IDiamondCut.FacetCut({
-            facetAddress: address(validator),
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: ownerValidationSelectors()
-        });
-
-        baseCut[4] = IDiamondCut.FacetCut({
+        baseCut[2] = IDiamondCut.FacetCut({
             facetAddress: address(executeFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: executeFacetSelectors()
@@ -96,10 +80,9 @@ contract DiamondFactory {
         IDiamondCut(diamondAddr).diamondCut(baseCut, address(0), "");
         initValidationWhitelist(diamondAddr);
         
-        // ------------------------------------------------------------
-        // Set validator = OwnerValidationModule
-        // ------------------------------------------------------------
-        OwnershipFacet(diamondAddr).transferOwnership(msg.sender);
+        ValidationFacet(diamondAddr).setAuthorizer(address(authorityResolver));
+        authorityResolver.setOwner(diamondAddr, msg.sender);
+        //OwnershipFacet(diamondAddr).transferOwnership(msg.sender);
 
         emit DiamondDeployed(msg.sender, seed, diamondAddr);
     }
@@ -115,22 +98,13 @@ contract DiamondFactory {
         s[3] = DiamondLoupeFacet.facetAddress.selector;
     }
 
-    function ownershipSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](2);
-        s[0] = OwnershipFacet.owner.selector;
-        s[1] = OwnershipFacet.transferOwnership.selector;
-    }
-
     function validationSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](3);
-        s[0] = ValidationFacet.getValidator.selector;
-        s[1] = ValidationFacet.setPublicSelector.selector;
-        s[2] = ValidationFacet.isPublicSelector.selector;
-    }
-
-    function ownerValidationSelectors() internal pure returns (bytes4[] memory s) {
-        s = new bytes4[](1);
-        s[0] = OwnerValidationFacet.validate.selector;
+        s = new bytes4[](5);
+        s[0] = ValidationFacet.getAuthorizer.selector;
+        s[1] = ValidationFacet.setAuthorizer.selector;
+        s[2] = ValidationFacet.setPublicSelector.selector;
+        s[3] = ValidationFacet.isPublicSelector.selector;
+        s[4] = ValidationFacet.validate.selector;
     }
 
     function executeFacetSelectors() internal pure returns (bytes4[] memory s) {
@@ -152,7 +126,7 @@ contract DiamondFactory {
 
         bytes memory bytecode = abi.encodePacked(
             type(Diamond).creationCode,
-            abi.encode(address(this), address(cutFacet))
+            abi.encode(address(cutFacet))
         );
 
         bytes32 hash = keccak256(
@@ -169,7 +143,7 @@ contract DiamondFactory {
         selectors[1] = IDiamondLoupe.facetAddresses.selector;
         selectors[2] = IDiamondLoupe.facetFunctionSelectors.selector;
         selectors[3] = IDiamondLoupe.facetAddress.selector;
-        selectors[4] = ValidationFacet.getValidator.selector;
+        selectors[4] = ValidationFacet.getAuthorizer.selector;
         // selectors[5] = IERC721Receiver.onERC721Received.selector;
         //selectors[6] = IERC165.supportsInterface.selector;
 

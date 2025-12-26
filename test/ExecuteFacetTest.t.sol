@@ -6,9 +6,8 @@ import "forge-std/Test.sol";
 import { DiamondFactory } from "../src/DiamondFactory.sol";
 import { DiamondCutFacet } from "../src/facets/DiamondCutFacet.sol";
 import { DiamondLoupeFacet } from "../src/facets/DiamondLoupeFacet.sol";
-import { OwnershipFacet } from "../src/facets/OwnershipFacet.sol";
 import { ValidationFacet } from "../src/facets/ValidationFacet.sol";
-import { OwnerValidationFacet } from "../src/facets/OwnerValidationFacet.sol";
+import { OwnerAuthorityResolver } from "../src/resolvers/OwnerAuthorityResolver.sol";
 
 import { ExecuteFacet } from "../src/facets/ExecuteFacet.sol";
 import { IDiamondCut } from "../src/interfaces/IDiamondCut.sol";
@@ -21,9 +20,8 @@ contract ExecuteFacetTest is Test {
 
     DiamondCutFacet cutFacet;
     DiamondLoupeFacet loupeFacet;
-    OwnershipFacet ownershipFacet;
     ValidationFacet validationFacet;
-    OwnerValidationFacet ownerValidatorFacet;
+    OwnerAuthorityResolver ownerAuthorityResolver;
     ExecuteFacet executeFacet;
     address diamondAddr;
 
@@ -38,9 +36,8 @@ contract ExecuteFacetTest is Test {
         // Deploy core facets
         cutFacet = new DiamondCutFacet();
         loupeFacet = new DiamondLoupeFacet();
-        ownershipFacet = new OwnershipFacet();
         validationFacet = new ValidationFacet();
-        ownerValidatorFacet = new OwnerValidationFacet();
+        ownerAuthorityResolver = new OwnerAuthorityResolver(deployer);
         executeFacet = new ExecuteFacet();
 
 
@@ -48,12 +45,13 @@ contract ExecuteFacetTest is Test {
         factory = new DiamondFactory(
             address(cutFacet),
             address(loupeFacet),
-            address(ownershipFacet),
             address(validationFacet),
-            address(ownerValidatorFacet),
+            address(ownerAuthorityResolver),
             address(executeFacet)
         );
         
+        ownerAuthorityResolver.setFactory(address(factory));
+
         vm.stopPrank();
 
         vm.startPrank(user);
