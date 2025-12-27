@@ -18,6 +18,7 @@ contract DeployDiamondFactory is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
+        address deployer = vm.addr(deployerKey);
         // -------------------------------
         // Deploy all facets (singletons)
         // -------------------------------
@@ -25,12 +26,14 @@ contract DeployDiamondFactory is Script {
         DiamondLoupeFacet loupeFacet = new DiamondLoupeFacet();
         ValidationFacet validationFacet = new ValidationFacet();
         ExecuteFacet executeFacet = new ExecuteFacet();
-        OwnerAuthorityResolver ownerAuthorityResolver = new OwnerAuthorityResolver(address(this));
-        NFTAuthorityResolver nftAuthorityResolver = new NFTAuthorityResolver(address(this));
+        
+        OwnerAuthorityResolver ownerAuthorityResolver = new OwnerAuthorityResolver(deployer);
+        NFTAuthorityResolver nftAuthorityResolver = new NFTAuthorityResolver(deployer);
 
         console2.log("DiamondCutFacet:       ", address(cutFacet));
         console2.log("DiamondLoupeFacet:     ", address(loupeFacet));
         console2.log("ValidationFacet:       ", address(validationFacet));
+        console2.log("executeFacet:          ", address(executeFacet));
         console2.log("OwnerAuthorityResolver: ", address(ownerAuthorityResolver));
         console2.log("NFTAuthorityResolver: ", address(nftAuthorityResolver));
 

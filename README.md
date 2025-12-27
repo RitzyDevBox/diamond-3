@@ -74,20 +74,26 @@ forge script script/deployDiamondFactory.s.sol:DeployDiamondFactory \
 
 ## Initial Modules Deployments:
 
-  DiamondLoupeFacet:      0x69238e56411524FeB5E0C700221A916d4A98FBe7
-  OwnershipFacet:         0xCeD152Ea769b1740feEcCDa959e9C45C99227d47
-  ValidationFacet:        0xaE78271d68274F6Dc5d49C0f5557f2C0c465Dbd9
-  OwnerValidationFacet:  0x7002E6f18f240f8e2209d3209D061a6E1E1bE977
-  DiamondFactory deployed at: 0xC95776A97661A21d86FA1Bb9b9fF6934E15BF1AF
+  DiamondCutFacet:        0x95d2EF6bbf1731E909F3D8Bf8DAec28AF7B5AE38
+  DiamondLoupeFacet:      0x37f36f667F33C3FCF725Bc7B87b3B6fA358f5C6e
+  ValidationFacet:        0x1F26Cf678bd526196E2D8497e464774484518069
+  executeFacet:           0x0954FDfEba0F89A9e9B776d897dddf4e26FcA3Da
+  OwnerAuthorityResolver:  0x7E2a43DD6b95c518a5248fD5a2A57315D767499b
+  NFTAuthorityResolver:  0xFA565823BF266B26F7cA44C2C305BB303C89b63a
+  DiamondFactory deployed at: 0x270EEF348212855eCb43374cEAfE012FA8c12B4e
+
+## Generating Abi's
+
+  jq '.abi' out/Diamond.sol/Diamond.json > abis/Diamond.abi.json
+  jq '.abi' out/DiamondFactory.sol/DiamondFactory.json > abis/DiamondFactory.abi.json
+  jq '.abi' out/DiamondCutFacet.sol/DiamondCutFacet.json > abis/DiamondCutFacet.abi.json
+  jq '.abi' out/DiamondLoupeFacet.sol/DiamondLoupeFacet.json > abis/DiamondLoupeFacet.abi.json
+  jq '.abi' out/ExecuteFacet.sol/ExecuteFacet.json > abis/ExecuteFacet.abi.json
+
+  
 
 ## Optional Modules
 
-forge script script/DeployBasicWalletFacet.s.sol:DeployBasicWalletFacet \
-  --fork-url hypercore \
-  --broadcast \
-  --legacy
-
-  BasicWalletFacet deployed at: 0x79e2fa7763C4D1884f6a6D98b51220eD79fC4484
 
 forge script script/DeployOpenMintERC20.s.sol:DeployOpenMintERC20   --fork-url hypercore   --broadcast   --legacy
 
