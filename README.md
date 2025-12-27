@@ -90,7 +90,12 @@ forge script script/deployDiamondFactory.s.sol:DeployDiamondFactory \
   jq '.abi' out/DiamondLoupeFacet.sol/DiamondLoupeFacet.json > abis/DiamondLoupeFacet.abi.json
   jq '.abi' out/ExecuteFacet.sol/ExecuteFacet.json > abis/ExecuteFacet.abi.json
 
-  
+## Computing Init Hash for offline wallet address resolution
+
+  forge script script/ComputeDiamondInitHash.s.sol
+
+  Diamond init code hash: 0x7f1c1485b422e93d1bde9f6b74e6092d4a69bff10c8ab93283c707f843ec44ff
+
 
 ## Optional Modules
 
