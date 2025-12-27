@@ -8,3 +8,4 @@ artifacts
 # Foundry build output
 out/
 cache/
+broadcast/
