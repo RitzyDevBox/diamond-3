@@ -14,6 +14,8 @@ import { IERC165 } from "./interfaces/IERC165.sol";
 // import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract DiamondFactory {
+
+    error InvalidWalletIndex(uint256 requested, uint256 nextAvailable);
     event DiamondDeployed(address indexed user, uint256 indexed seed, address diamond);
 
     // ------------------------------------------------------------
@@ -23,6 +25,8 @@ contract DiamondFactory {
     DiamondLoupeFacet loupeFacet;
     ValidationFacet validationFacet;
     ExecuteFacet executeFacet; 
+
+    mapping(address user => uint256 nextIndex) public userToNextWalletIndexMap;
 
     constructor(
         address _cutFacet,
@@ -36,16 +40,42 @@ contract DiamondFactory {
         executeFacet = ExecuteFacet(_executeFacet);
     }
 
-    /// @notice Deploy a Diamond using CREATE2 + seed
-    /// @param seed Any user-chosen number (unique per wallet)
-    function deployDiamond(uint256 seed, address defaultAuthorizer, bytes calldata options)
+    function computeDiamondAddress(address user, uint256 seed)
         external
+        view
+        returns (address)
+    {
+        bytes32 salt = keccak256(abi.encode(user, seed));
+
+        bytes memory bytecode = abi.encodePacked(
+            type(Diamond).creationCode,
+            abi.encode(address(cutFacet))
+        );
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode))
+        );
+
+        return address(uint160(uint(hash)));
+    }
+
+    function deployDiamond(address defaultAuthorizer, bytes calldata options)  external returns (address diamondAddr) {
+        uint256 nextIndex = userToNextWalletIndexMap[msg.sender]++;
+        return deployDiamondAtIndex(nextIndex, defaultAuthorizer, options);
+    }
+
+    /// @notice Deploy a Diamond using CREATE2 + index
+    /// @param index the next index for the wallet to create
+    /// @param defaultAuthorizer authorization schema to be used by the diamond (e.g EOA owner, NFT Owner, Multisig...)
+    /// @param options the options to pass to the authorizer when creating the wallet
+    function deployDiamondAtIndex(uint256 index, address defaultAuthorizer, bytes calldata options)
+        internal
         returns (address diamondAddr)
     {
         // ------------------------------------------------------------
         // CREATE2 deploy the Diamond
         // ------------------------------------------------------------
-        bytes32 salt = keccak256(abi.encode(msg.sender, seed));
+        bytes32 salt = keccak256(abi.encode(msg.sender, index));
 
         diamondAddr = address(
             new Diamond{salt: salt}(address(cutFacet))
@@ -82,7 +112,7 @@ contract DiamondFactory {
         IAuthorityInitializer(defaultAuthorizer).initialize(diamondAddr, options);
         //OwnershipFacet(diamondAddr).transferOwnership(msg.sender);
 
-        emit DiamondDeployed(msg.sender, seed, diamondAddr);
+        emit DiamondDeployed(msg.sender, index, diamondAddr);
     }
 
     // ------------------------------------------------------------
@@ -109,29 +139,6 @@ contract DiamondFactory {
         s = new bytes4[](2);
         s[0] = ExecuteFacet.execute.selector;
         s[1] = ExecuteFacet.batchExecute.selector;
-    }
-
-
-    // ------------------------------------------------------------
-    // VIEW: Compute address without deploying (nice UX)
-    // ------------------------------------------------------------
-    function computeDiamondAddress(address user, uint256 seed)
-        external
-        view
-        returns (address)
-    {
-        bytes32 salt = keccak256(abi.encode(user, seed));
-
-        bytes memory bytecode = abi.encodePacked(
-            type(Diamond).creationCode,
-            abi.encode(address(cutFacet))
-        );
-
-        bytes32 hash = keccak256(
-            abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode))
-        );
-
-        return address(uint160(uint(hash)));
     }
 
     function initValidationWhitelist(address diamondAddr) internal {

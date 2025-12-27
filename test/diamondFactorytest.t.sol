@@ -70,7 +70,7 @@ contract DiamondFactoryTest is Test {
         vm.startPrank(user);
 
         // Deploy new diamond using seed=1
-        address diamondAddr = factory.deployDiamond(1, address(ownerAuthorityResolver), abi.encode(user));
+        address diamondAddr = factory.deployDiamond(address(ownerAuthorityResolver), abi.encode(user));
 
         // --------------- ASSERT CALL ALLOWED (owner) ------
 
@@ -78,7 +78,7 @@ contract DiamondFactoryTest is Test {
         cut[0] = IDiamondCut.FacetCut({
             facetAddress: address(mockFacet),
             action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: mockValidatorSelectors()
+            functionSelectors: mockFacetSelectors()
         });
 
         IDiamondCut(diamondAddr).diamondCut(cut, address(0), "");
@@ -98,17 +98,8 @@ contract DiamondFactoryTest is Test {
     function testValidatorBlocksNonOwner() public {
         vm.startPrank(user);
 
-        address diamondAddr = factory.deployDiamond(123, address(ownerAuthorityResolver), abi.encode(user));
-
-        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
-        cut[0] = IDiamondCut.FacetCut({
-            facetAddress: address(mockFacet),
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: mockValidatorSelectors()
-        });
-
-        IDiamondCut(diamondAddr).diamondCut(cut, address(0), "");
-    
+        address diamondAddr = factory.deployDiamond(address(ownerAuthorityResolver), abi.encode(user));
+        installMockFacet(IDiamondCut(diamondAddr));
         vm.stopPrank();
 
         // Non-owner
@@ -121,10 +112,10 @@ contract DiamondFactoryTest is Test {
     }
 
     function testComputeDiamondAddress() public {
-        address predicted = factory.computeDiamondAddress(user, 999);
+        address predicted = factory.computeDiamondAddress(user, 0);
 
         vm.startPrank(user);
-        address deployed = factory.deployDiamond(999, address(ownerAuthorityResolver), abi.encode(user));
+        address deployed = factory.deployDiamond(address(ownerAuthorityResolver), abi.encode(user));
         vm.stopPrank();
 
         assertEq(
@@ -138,7 +129,7 @@ contract DiamondFactoryTest is Test {
         vm.startPrank(user);
 
         // Deploy diamond
-        address diamondAddr = factory.deployDiamond(111, address(ownerAuthorityResolver), abi.encode(user));
+        address diamondAddr = factory.deployDiamond(address(ownerAuthorityResolver), abi.encode(user));
 
         vm.stopPrank();
 
@@ -164,7 +155,44 @@ contract DiamondFactoryTest is Test {
         vm.stopPrank();
     }
 
-    function mockValidatorSelectors() internal pure returns (bytes4[] memory s) {
+    function testUserCanDeployMultipleWallets() public {
+        vm.startPrank(user);
+    
+
+        address w0 = factory.deployDiamond(
+            address(ownerAuthorityResolver),
+            abi.encode(user)
+        );
+
+        address w1 = factory.deployDiamond(
+            address(ownerAuthorityResolver),
+            abi.encode(user)
+        );
+
+        installMockFacet(IDiamondCut(w0));
+        installMockFacet(IDiamondCut(w1));
+
+        assertTrue(w0 != w1, "wallets must be unique");
+
+        // owner can call on both
+        MockFacet(w0).ping();
+        MockFacet(w1).ping();
+
+        vm.stopPrank();
+    }
+
+    function installMockFacet(IDiamondCut diamond) internal {
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
+        cut[0] = IDiamondCut.FacetCut({
+            facetAddress: address(mockFacet),
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: mockFacetSelectors()
+        });
+
+        diamond.diamondCut(cut, address(0), "");
+    }
+
+    function mockFacetSelectors() internal pure returns (bytes4[] memory s) {
         s = new bytes4[](1);
         s[0] = MockFacet.ping.selector;
     }
