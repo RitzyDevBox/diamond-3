@@ -10,6 +10,7 @@ import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
 import {ValidationFacet} from "../src/facets/ValidationFacet.sol";
 import {ExecuteFacet} from "../src/facets/ExecuteFacet.sol";
 import {OwnerAuthorityResolver} from "../src/resolvers/OwnerAuthorityResolver.sol";
+import {NFTAuthorityResolver} from "../src/resolvers/NFTAuthorityResolver.sol";
 
 
 contract DeployDiamondFactory is Script {
@@ -25,11 +26,13 @@ contract DeployDiamondFactory is Script {
         ValidationFacet validationFacet = new ValidationFacet();
         ExecuteFacet executeFacet = new ExecuteFacet();
         OwnerAuthorityResolver ownerAuthorityResolver = new OwnerAuthorityResolver(address(this));
+        NFTAuthorityResolver nftAuthorityResolver = new NFTAuthorityResolver(address(this));
 
         console2.log("DiamondCutFacet:       ", address(cutFacet));
         console2.log("DiamondLoupeFacet:     ", address(loupeFacet));
         console2.log("ValidationFacet:       ", address(validationFacet));
         console2.log("OwnerAuthorityResolver: ", address(ownerAuthorityResolver));
+        console2.log("NFTAuthorityResolver: ", address(nftAuthorityResolver));
 
         // -------------------------------
         // Deploy factory with facet addrs
@@ -42,6 +45,7 @@ contract DeployDiamondFactory is Script {
         );
 
         ownerAuthorityResolver.setFactory(address(factory));
+        nftAuthorityResolver.setFactory(address(factory));
         console2.log("DiamondFactory deployed at:", address(factory));
 
         vm.stopBroadcast();

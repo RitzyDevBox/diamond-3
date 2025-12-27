@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import {Diamond} from "../src/Diamond.sol";
 import {DiamondFactory} from "../src/DiamondFactory.sol";
-import {OwnerAuthorityResolver} from "../src/resolvers/OwnerAuthorityResolver.sol";
+import {NFTAuthorityResolver} from "../src/resolvers/NFTAuthorityResolver.sol";
 import {DiamondCutFacet} from "../src/facets/DiamondCutFacet.sol";
 import {DiamondLoupeFacet} from "../src/facets/DiamondLoupeFacet.sol";
 import {ExecuteFacet} from "../src/facets/ExecuteFacet.sol";
@@ -14,6 +14,7 @@ import {IDiamondCut} from "../src/interfaces/IDiamondCut.sol";
 import {IDiamondLoupe} from "../src/interfaces/IDiamondLoupe.sol";
 import {IValidationModule} from "../src/interfaces/IValidationModule.sol";
 import {IERC165} from "../src/interfaces/IERC165.sol";
+import { MockERC721 } from "./mocks/MockERC721.sol";
 
 /// ------------------------------------------------------------
 /// Mock Facet
@@ -26,19 +27,22 @@ contract MockFacet {
 /// ------------------------------------------------------------
 /// TEST FACTORY
 /// ------------------------------------------------------------
-contract DiamondFactoryTest is Test {
+contract NFTDiamondFactoryTest is Test {
     DiamondFactory factory;
 
     // Pre-deployed facet singletons
     DiamondCutFacet cutFacet;
     DiamondLoupeFacet loupeFacet;
     ValidationFacet validationFacet;
-    OwnerAuthorityResolver ownerAuthorityResolver;
+    NFTAuthorityResolver nftAuthorityResolver;
     MockFacet mockFacet;
     ExecuteFacet executeFacet;
+    MockERC721 nft;
 
+    uint256 constant TOKEN_ID = 1;
     address deployer = address(0xBEEF);
     address user     = address(0xCAFE);
+    address otherUser = address(0xD00D);
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -47,7 +51,7 @@ contract DiamondFactoryTest is Test {
         cutFacet = new DiamondCutFacet();
         loupeFacet = new DiamondLoupeFacet();
         validationFacet = new ValidationFacet();
-        ownerAuthorityResolver = new OwnerAuthorityResolver(deployer);
+        nftAuthorityResolver = new NFTAuthorityResolver(deployer);
         executeFacet = new ExecuteFacet();
         mockFacet = new MockFacet();
 
@@ -59,8 +63,13 @@ contract DiamondFactoryTest is Test {
             address(executeFacet)
         );
 
-        ownerAuthorityResolver.setFactory(address(factory));
+        nftAuthorityResolver.setFactory(address(factory));
+        nft = new MockERC721();
+        nft.mint(user, TOKEN_ID);
+
         vm.stopPrank();
+
+
     }
 
     /// ------------------------------------------------------------
@@ -70,9 +79,10 @@ contract DiamondFactoryTest is Test {
         vm.startPrank(user);
 
         // Deploy new diamond using seed=1
-        address diamondAddr = factory.deployDiamond(address(ownerAuthorityResolver), abi.encode(user));
+        address diamondAddr = factory.deployDiamond(address(nftAuthorityResolver), abi.encode(address(nft), TOKEN_ID));
 
         // --------------- ASSERT CALL ALLOWED (owner) ------
+
         installMockFacet(IDiamondCut(diamondAddr));
         
         
@@ -91,7 +101,7 @@ contract DiamondFactoryTest is Test {
     function testValidatorBlocksNonOwner() public {
         vm.startPrank(user);
 
-        address diamondAddr = factory.deployDiamond(address(ownerAuthorityResolver), abi.encode(user));
+        address diamondAddr = factory.deployDiamond(address(nftAuthorityResolver), abi.encode(address(nft), TOKEN_ID));
         installMockFacet(IDiamondCut(diamondAddr));
         vm.stopPrank();
 
@@ -104,25 +114,11 @@ contract DiamondFactoryTest is Test {
         vm.stopPrank();
     }
 
-    function testComputeDiamondAddress() public {
-        address predicted = factory.computeDiamondAddress(user, 0);
-
-        vm.startPrank(user);
-        address deployed = factory.deployDiamond(address(ownerAuthorityResolver), abi.encode(user));
-        vm.stopPrank();
-
-        assertEq(
-            deployed,
-            predicted,
-            "computeDiamondAddress must match actual CREATE2 deployment"
-        );
-    }
-
     function testPublicSelectorsArePublic() public {
         vm.startPrank(user);
 
         // Deploy diamond
-        address diamondAddr = factory.deployDiamond(address(ownerAuthorityResolver), abi.encode(user));
+        address diamondAddr = factory.deployDiamond(address(nftAuthorityResolver), abi.encode(address(nft), TOKEN_ID));
 
         vm.stopPrank();
 
@@ -148,31 +144,39 @@ contract DiamondFactoryTest is Test {
         vm.stopPrank();
     }
 
-    function testUserCanDeployMultipleWallets() public {
+    function testNFTTransferUpdatesAuthority() public {
         vm.startPrank(user);
-    
 
-        address w0 = factory.deployDiamond(
-            address(ownerAuthorityResolver),
-            abi.encode(user)
+        address diamondAddr = factory.deployDiamond(
+            address(nftAuthorityResolver),
+            abi.encode(address(nft), TOKEN_ID)
         );
 
-        address w1 = factory.deployDiamond(
-            address(ownerAuthorityResolver),
-            abi.encode(user)
-        );
+        installMockFacet(IDiamondCut(diamondAddr));
 
-        installMockFacet(IDiamondCut(w0));
-        installMockFacet(IDiamondCut(w1));
-
-        assertTrue(w0 != w1, "wallets must be unique");
-
-        // owner can call on both
-        MockFacet(w0).ping();
-        MockFacet(w1).ping();
+        // user is initial NFT owner → allowed
+        MockFacet(diamondAddr).ping();
 
         vm.stopPrank();
+
+        // transfer NFT
+        nft.transferFrom(user, otherUser, TOKEN_ID);
+
+        // old owner blocked
+        vm.startPrank(user);
+        vm.expectRevert(Diamond.NotAuthorized.selector);
+        MockFacet(diamondAddr).ping();
+        vm.stopPrank();
+
+        // new NFT owner allowed
+        vm.startPrank(otherUser);
+        vm.expectEmit(true, false, false, true);
+        emit MockFacet.Ping(otherUser);
+        MockFacet(diamondAddr).ping();
+        vm.stopPrank();
     }
+
+
 
     function installMockFacet(IDiamondCut diamond) internal {
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
